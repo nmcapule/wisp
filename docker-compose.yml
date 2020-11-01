@@ -1,0 +1,35 @@
+version: '3'
+services:
+  backend:
+    privileged: true
+    container_name: wisp-backend
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile.dev
+    ports:
+      - '3000:3000'
+    expose:
+      - 3000
+    volumes:
+      - $PWD/backend:/app
+    networks:
+      - network-wisp
+  frontend:
+    privileged: true
+    container_name: wisp-frontend
+    build:
+      context: ./frontend
+      dockerfile: ./Dockerfile.dev
+    ports:
+      - '5000:5000'
+      - '35729:35729'
+    expose:
+      - 5000
+      - 35729
+    volumes:
+      - $PWD/frontend:/app
+    networks:
+      - network-wisp
+
+networks:
+  network-wisp:

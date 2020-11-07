@@ -10,6 +10,8 @@ services:
     build:
       context: ./backend/octarine
       dockerfile: ./Dockerfile.dev
+    environment:
+      STORAGE_POSTGRES_URL: ${STORAGE_POSTGRES_URL}
     ports:
       - "${BACKEND_OCTARINE_PORT}:${BACKEND_OCTARINE_PORT}"
     expose:
@@ -46,15 +48,17 @@ services:
   
   storage-postgres:
     container_name: wisp-storage-postgres
-    image: postgres:latest
+    image: postgres
     ports:
       - "${STORAGE_POSTGRES_PORT}:${STORAGE_POSTGRES_PORT}"
     expose:
       - ${STORAGE_POSTGRES_PORT}
     environment:
       POSTGRES_DB: ${STORAGE_POSTGRES_DB}
+      POSTGRES_USER: ${STORAGE_POSTGRES_USER}
       POSTGRES_PASSWORD: ${STORAGE_POSTGRES_PASS}
     volumes:
+      - "$PWD/dockerdata/postgres-data:/var/lib/postgresql/data"
       - "$PWD/dockerdata/postgres:/var/lib/postgres"
       - "$PWD/storage/postgres-init:/docker-entrypoint-initdb.d"
     networks:

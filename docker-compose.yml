@@ -1,19 +1,65 @@
-version: '3'
+version: "3"
 services:
-  backend:
+  backend-octarine:
     privileged: true
-    container_name: wisp-backend
+    container_name: wisp-backend-octarine
+    depends_on:
+      - backend-blind-io
+      - storage-redis
+      - storage-postgres
     build:
-      context: ./backend
+      context: ./backend/octarine
       dockerfile: ./Dockerfile.dev
     ports:
-      - '3000:3000'
+      - "${BACKEND_OCTARINE_PORT}:${BACKEND_OCTARINE_PORT}"
     expose:
-      - 3000
+      - ${BACKEND_OCTARINE_PORT}
     volumes:
-      - $PWD/backend:/app
+      - "$PWD/backend/octarine:/app"
     networks:
       - network-wisp
+  
+  backend-blind-io:
+    container_name: wisp-backend-blind-io
+    build:
+      context: ./backend/blind-io
+      dockerfile: ./Dockerfile.dev
+    ports:
+      - "${BACKEND_BLIND_IO_PORT}:${BACKEND_BLIND_IO_PORT}"
+    volumes:
+      - "$PWD/backend/blind-io:/app"
+    networks:
+      - network-wisp
+  
+  storage-redis:
+    container_name: wisp-storage-redis
+    image: redis
+    ports:
+      - "${STORAGE_REDIS_PORT}:${STORAGE_REDIS_PORT}"
+    expose:
+      - ${STORAGE_REDIS_PORT}
+    command: "redis-server --port ${STORAGE_REDIS_PORT}"
+    volumes:
+      - "$PWD/dockerdata/redis:/data/redis"
+    networks:
+      - network-wisp
+  
+  storage-postgres:
+    container_name: wisp-storage-postgres
+    image: postgres:latest
+    ports:
+      - "${STORAGE_POSTGRES_PORT}:${STORAGE_POSTGRES_PORT}"
+    expose:
+      - ${STORAGE_POSTGRES_PORT}
+    environment:
+      POSTGRES_DB: ${STORAGE_POSTGRES_DB}
+      POSTGRES_PASSWORD: ${STORAGE_POSTGRES_PASS}
+    volumes:
+      - "$PWD/dockerdata/postgres:/var/lib/postgres"
+      - "$PWD/storage/postgres-init:/docker-entrypoint-initdb.d"
+    networks:
+      - network-wisp
+
   frontend:
     privileged: true
     container_name: wisp-frontend
@@ -21,8 +67,8 @@ services:
       context: ./frontend
       dockerfile: ./Dockerfile.dev
     ports:
-      - '5000:5000'
-      - '35729:35729'
+      - "5000:5000"
+      - "35729:35729"
     expose:
       - 5000
       - 35729

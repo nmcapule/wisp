@@ -5,6 +5,7 @@ import { join } from 'path';
 
 import config from './config';
 import { WispsModule } from './wisps/wisps.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { WispsModule } from './wisps/wisps.module';
     }),
     RedisModule.register(config.redis),
     WispsModule,
+    UsersModule,
   ],
 })
 export class AppModule {}

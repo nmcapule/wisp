@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { RedisModule } from 'nestjs-redis';
 import { join } from 'path';
+
 import config from './config';
-import { RtcChatModule } from './rtc-chat/rtc-chat.module';
 import { WispsModule } from './wisps/wisps.module';
 
 @Module({
@@ -14,7 +15,7 @@ import { WispsModule } from './wisps/wisps.module';
       entities: [join(__dirname, '**', '*.entity.{ts,js}')],
       synchronize: true,
     }),
-    RtcChatModule,
+    RedisModule.register(config.redis),
     WispsModule,
   ],
 })

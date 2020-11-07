@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
-@Entity({ name: 'wisps' })
-export class Wisp {
+@Entity({ name: 'users' })
+export class User {
   @PrimaryGeneratedColumn({ name: 'user_id' })
   @ApiProperty({ readOnly: true })
   id: number;

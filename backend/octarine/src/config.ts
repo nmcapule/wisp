@@ -16,4 +16,8 @@ export default {
   db: {
     url: process.env.STORAGE_POSTGRES_URL,
   },
+
+  redis: {
+    url: process.env.STORAGE_REDIS_URL,
+  },
 };

@@ -23,7 +23,8 @@
 - storage
   - redis
     - store user locations
-    - key: user-id, value: coords
+    - key: `user:coords:${user-id}`, value: coords
+    - key: `user:peer-ids:${user-id}`, value: list of user's active peer-ids
   - postgres
     - store:user-id
     - store:peer-id
@@ -42,6 +43,13 @@
 ## Connections
 
 ### User-Backend
+
+#### Logging-in
+
+- user connects to backend
+- backend requests credential
+- if user refuses, backend treats user as anonymous
+- if user accepts, go through normal log in process
 
 #### Tracking Users
 

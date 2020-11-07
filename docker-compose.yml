@@ -11,6 +11,7 @@ services:
       context: ./backend/octarine
       dockerfile: ./Dockerfile.dev
     environment:
+      STORAGE_REDIS_URL: ${STORAGE_REDIS_URL}
       STORAGE_POSTGRES_URL: ${STORAGE_POSTGRES_URL}
     ports:
       - "${BACKEND_OCTARINE_PORT}:${BACKEND_OCTARINE_PORT}"

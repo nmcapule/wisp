@@ -34,6 +34,7 @@
     "class-validator": "^0.12.2",
     "compression": "^1.7.4",
     "dotenv": "^8.2.0",
+    "nestjs-redis": "^1.2.8",
     "pg": "^8.4.2",
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",

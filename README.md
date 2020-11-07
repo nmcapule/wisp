@@ -1,4 +1,4 @@
-# wispwasp
+# Project Wisp
 
 ## Development
 
@@ -13,3 +13,5 @@ The frontend listens at localhost:5000 and localhost:35729 (for ws).
 ## Promising Techs
 
 - https://github.com/manubb/Leaflet.PixiOverlay
+- Web Workers
+- Indexed DB

@@ -35,13 +35,32 @@
   --color-positive: #13ce66;
   --color-negative: #ff4949;
   --color-warning: #ffc82c;
+  // Extra.
+  --color-white: #fff;
 
   // Theme.
   --color-primary: var(--color-steel);
+  --color-primary-text: var(--color-snow);
   --color-secondary: var(--color-orange);
 }
 
-.page-container {
+.wisp-page {
   width: 100%;
   height: 100%;
+}
+
+.wisp-overlay {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  pointer-events: none;
+
+  .interactive {
+    pointer-events: all;
+  }
 }

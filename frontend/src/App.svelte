@@ -39,7 +39,7 @@
         }
 
         &.-selected {
-          background-color: var(--color-snow);
+          background-color: var(--color-white);
           color: var(--color-primary);
           font-weight: 600;
         }

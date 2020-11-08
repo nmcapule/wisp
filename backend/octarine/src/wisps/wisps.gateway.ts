@@ -9,7 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
-import { ScoutingData, WsUserData } from './blind-io.models';
+import { WispPositionData, WispData } from './blind-io.models';
 import { BlindIoService } from './blind-io.service';
 import { Message } from './wisps.models';
 
@@ -50,7 +50,7 @@ export class WispsGateway implements OnGatewayConnection<Socket>, OnGatewayDisco
     await this.blindIoService.removeWisp(client.id);
   }
 
-  async handleLogin(client: Socket, message: Message<WsUserData>) {
+  async handleLogin(client: Socket, message: Message<WispData>) {
     const current = await this.blindIoService.getWisp(client.id);
 
     await this.blindIoService.addWisp(client.id, {
@@ -58,7 +58,7 @@ export class WispsGateway implements OnGatewayConnection<Socket>, OnGatewayDisco
       ...message.data,
     });
 
-    client.send(new Message<WsUserData>('login', message.data));
+    client.send(new Message<WispData>('login', message.data));
   }
 
   async handleLogout(client: Socket) {
@@ -68,13 +68,13 @@ export class WispsGateway implements OnGatewayConnection<Socket>, OnGatewayDisco
     // Make an anonymous user associated to client id when logging out.
     await this.blindIoService.addWisp(client.id, anon);
 
-    client.send(new Message<WsUserData>('logout', anon));
+    client.send(new Message<WispData>('logout', anon));
   }
 
-  async handleScout(client: Socket, message: Message<ScoutingData>) {
+  async handleScout(client: Socket, message: Message<WispPositionData>) {
     const users = await this.blindIoService.findNearbyWisps(client.id, message.data);
 
     // Reply list of users.
-    client.send(new Message<WsUserData[]>('scout', users));
+    client.send(new Message<WispData[]>('scout', users));
   }
 }

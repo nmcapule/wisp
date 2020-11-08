@@ -1,9 +1,9 @@
-export interface WsUserData {
+export interface WispData {
   userId?: string;
   peerId?: string;
 }
 
-export interface ScoutingData {
+export interface WispPositionData {
   coords: {
     latitude?: number;
     longitude?: number;

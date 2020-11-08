@@ -1,5 +1,30 @@
 <script lang="ts">
   import Map from './Map.svelte';
+
+  let showMessageDialog = false;
+  let elemMessageInput;
+  $: (() => {
+    if (elemMessageInput) {
+      elemMessageInput.focus();
+    }
+  })();
+
+  function messageInputKeydown(event) {
+    if (event.code === 'Enter' && !event.shiftKey) {
+      showMessageDialog = false;
+      sendMessage(elemMessageInput.value);
+      return;
+    }
+    // TODO: This doesn't work. Escape is not captured.
+    if (event.code === 'Escape') {
+      showMessageDialog = false;
+      return;
+    }
+  }
+
+  function sendMessage(s: string) {
+    alert(`send message: ${s}`);
+  }
 </script>
 
 <style lang="scss">
@@ -33,6 +58,12 @@
     }
   }
 
+  .name-input {
+    border-bottom: 2px solid var(--color-smoke);
+    min-width: 10em;
+    cursor: pointer;
+  }
+
   .online-indicator {
     background-color: var(--color-primary);
     color: var(--color-primary-text);
@@ -54,19 +85,33 @@
       font-size: 1.5em;
     }
   }
+
+  .message-input {
+    width: 30em;
+    height: 20em;
+    max-width: 100%;
+    max-height: 100%;
+    border: 0;
+    border-radius: 0.75em;
+    font-size: 1.5em;
+  }
 </style>
 
 <div class="wisp-page d-flex align-items-stretch">
   <div class="page-card d-flex flex-column">
-    <div class="h2 font-weight-normal title">Hello ___________ !</div>
+    <div class="h2 font-weight-normal title">
+      Hello
+      <span contenteditable="true" class="name-input">user-12345</span>
+      !
+    </div>
     <div class="peer-list d-flex flex-column">
-      <div class="label">Pinned</div>
+      <div class="label d-flex justify-content-between"><span>Pinned</span> <span>📌</span></div>
       <div class="item" />
       <div class="item" />
       <div class="item" />
     </div>
     <div class="peer-list d-flex flex-column">
-      <div class="label">Peers</div>
+      <div class="label d-flex justify-content-between"><span>Peers</span> <span>🤝</span></div>
       <div class="item" />
       <div class="item" />
       <div class="item" />
@@ -77,10 +122,24 @@
       <div class="online-indicator interactive">396 wisps online @heywisp.io</div>
     </div>
     <div class="wisp-overlay d-flex justify-content-end align-items-end">
-      <div class="fab-button interactive d-flex justify-content-center align-items-center">
+      <div
+        class="fab-button interactive d-flex justify-content-center align-items-center"
+        on:click={() => (showMessageDialog = true)}>
         <span class="icon">💬</span>
       </div>
     </div>
+    {#if showMessageDialog}
+      <div
+        class="wisp-overlay wisp-dialog interactive d-flex justify-content-center align-items-center"
+        on:click={() => (showMessageDialog = false)}>
+        <textarea
+          bind:this={elemMessageInput}
+          class="message-input"
+          placeholder="Input text here"
+          on:click={(e) => e.stopPropagation()}
+          on:keydown={messageInputKeydown} />
+      </div>
+    {/if}
     <Map />
   </div>
 </div>

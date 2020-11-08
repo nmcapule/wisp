@@ -60,7 +60,12 @@
   z-index: 10000;
   pointer-events: none;
 
+  &.interactive,
   .interactive {
     pointer-events: all;
+  }
+
+  &.wisp-dialog {
+    background-color: rgba(0, 0, 0, 0.25);
   }
 }

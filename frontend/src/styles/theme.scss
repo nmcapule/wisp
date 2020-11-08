@@ -1,0 +1,47 @@
+:root {
+  // Basic color definitions. Lifted from: https://marvelapp.com/styleguide/design/color-scheme
+  // Brand colors.
+  --color-light-marvel: #85d7ff;
+  --color-marvel: #1fb6ff;
+  --color-dark-marvel: #009eeb;
+  --color-light-purple: #a389f4;
+  --color-purple: #7e5bef;
+  --color-dark-purple: #592dea;
+  --color-light-pink: #ff7ce5;
+  --color-pink: #ff49db;
+  --color-dark-pink: #ff16d1;
+  --color-light-orange: #ff9e7c;
+  --color-orange: #ff7849;
+  --color-dark-orange: #ff5216;
+  --color-light-green: #29eb7f;
+  --color-green: #13ce66;
+  --color-dark-green: #0f9f4f;
+  --color-light-yellow: #ffd55f;
+  --color-yellow: #ffc82c;
+  --color-dark-yellow: #f8b700;
+  // Grey colors.
+  --color-black: #1f2d3d;
+  --color-steel: #273444;
+  --color-slate: #3c4858;
+  --color-silver: #8492a6;
+  --color-smoke: #e0e6ed;
+  --color-dark-smoke: #d3dce6;
+  --color-extra-dark-smoke: #c0ccda;
+  --color-snow: #f9fafc;
+  --color-dark-snow: #eff2f7;
+  --color-extra-dark-snow: #e5e9f2;
+  // UI colors.
+  --color-blue: #1fb6ff;
+  --color-positive: #13ce66;
+  --color-negative: #ff4949;
+  --color-warning: #ffc82c;
+
+  // Theme.
+  --color-primary: var(--color-steel);
+  --color-secondary: var(--color-orange);
+}
+
+.page-container {
+  width: 100%;
+  height: 100%;
+}

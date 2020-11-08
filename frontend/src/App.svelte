@@ -1,39 +1,66 @@
 <script lang="ts">
-  import { Router, Link, Route } from 'svelte-routing';
+  import { Router, links, Route } from 'svelte-routing';
 
-  import RtcChat from './rtc-chat/RtcChat.svelte';
+  import RtcChat from './page-rtc-chat/RtcChat.svelte';
+  import Chat from './page-chat/Chat.svelte';
 
   export let url = '';
 </script>
 
 <style lang="scss">
-  .nav-container {
-    position: fixed;
-    right: 0;
-    z-index: 1000;
-    background-color: #fff;
-  }
+  @import './styles/theme.scss';
+
   .main-container {
     width: 100%;
     height: 100%;
+
+    > .nav {
+      width: 4em;
+      background-color: var(--color-primary);
+
+      > .item {
+        width: 4em;
+        height: 4em;
+        background-color: var(--color-smoke);
+        color: var(--color-silver);
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+
+        > .nav-text {
+          font-size: 0.8em;
+        }
+
+        &.-home {
+          background-color: var(--color-primary);
+          color: rgba(0, 0, 0, 0);
+        }
+
+        &.-selected {
+          background-color: var(--color-snow);
+          color: var(--color-primary);
+          font-weight: 600;
+        }
+      }
+    }
   }
 </style>
 
-<svelte:head>
-  <link
-    rel="stylesheet"
-    href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
-    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
-    crossorigin="anonymous" />
-</svelte:head>
-
 <Router {url}>
-  <nav class="nav-container">
-    <Link to="/chat">Chat</Link>
-  </nav>
-  <div class="main-container">
-    <Route path="/chat">
-      <RtcChat />
-    </Route>
+  <div class="d-flex main-container">
+    <nav use:links class="nav d-flex flex-column">
+      <a href="/" class="item -home"><span class="nav-text">Home</span></a>
+      <a href="/chat" class="item -selected"><span class="nav-text">Chat</span></a>
+      <a href="/rtc-chat" class="item"><span class="nav-text">RTC</span></a>
+      <a href="/peers" class="item"><span class="nav-text">Peers</span></a>
+      <a href="/public" class="item"><span class="nav-text">Public</span></a>
+      <a href="/profile" class="item"><span class="nav-text">Profile</span></a>
+    </nav>
+    <div class="content flex-grow-1 align-self-stretch">
+      <Route path="/chat" component={Chat} />
+      <Route path="/rtc-chat" component={RtcChat} />
+    </div>
   </div>
 </Router>

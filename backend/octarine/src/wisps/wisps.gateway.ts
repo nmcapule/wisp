@@ -11,12 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import { ScoutingData, WsUserData } from './blind-io.models';
 import { BlindIoService } from './blind-io.service';
-
-export type MessageType = 'login' | 'logout' | 'error' | 'scout';
-
-export class Message<T> {
-  constructor(public type: MessageType, public data?: T) {}
-}
+import { Message } from './wisps.models';
 
 @WebSocketGateway(null, { transports: ['websocket'] })
 export class WispsGateway implements OnGatewayConnection<Socket>, OnGatewayDisconnect<Socket> {

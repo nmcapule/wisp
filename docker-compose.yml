@@ -56,8 +56,6 @@ services:
     image: redis
     ports:
       - "${STORAGE_REDIS_PORT}:${STORAGE_REDIS_PORT}"
-    expose:
-      - ${STORAGE_REDIS_PORT}
     command: "redis-server --port ${STORAGE_REDIS_PORT}"
     volumes:
       - "$PWD/dockerdata/redis:/data/redis"
@@ -69,8 +67,6 @@ services:
     image: postgres
     ports:
       - "${STORAGE_POSTGRES_PORT}:${STORAGE_POSTGRES_PORT}"
-    expose:
-      - ${STORAGE_POSTGRES_PORT}
     environment:
       POSTGRES_DB: ${STORAGE_POSTGRES_DB}
       POSTGRES_USER: ${STORAGE_POSTGRES_USER}

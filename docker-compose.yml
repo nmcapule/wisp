@@ -5,6 +5,7 @@ services:
     container_name: wisp-backend-octarine
     depends_on:
       - backend-blind-io
+      - backend-peerserver
       - storage-redis
       - storage-postgres
     build:
@@ -31,6 +32,22 @@ services:
       - "${BACKEND_BLIND_IO_PORT}:${BACKEND_BLIND_IO_PORT}"
     volumes:
       - "$PWD/backend/blind-io:/app"
+    networks:
+      - network-wisp
+  
+  backend-peerserver:
+    container_name: wisp-backend-peerserver
+    build:
+      context: ./backend/peerserver
+      dockerfile: ./Dockerfile.dev
+    ports:
+      - "${BACKEND_PEERSERVER_PORT}:${BACKEND_PEERSERVER_PORT}"
+    expose:
+      - ${BACKEND_PEERSERVER_PORT}
+    volumes:
+      - "$PWD/backend/peerserver:/app"
+    environment:
+      DEBUG: "express:*" 
     networks:
       - network-wisp
   

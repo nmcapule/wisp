@@ -32,7 +32,15 @@ export class WispClient {
   peer: Peer;
 
   constructor(backendUrl = SOCKET_IO_BACKEND, connectCallback?: (self: WispClient) => void) {
-    this.peer = new (window as any).Peer(); // HAYUP
+    this.peer = new (window as any).Peer(null, {
+      host: 'localhost',
+      port: 9000,
+      path: '/peerjs',
+      config: {
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        sdpSemantics: 'unified-plan',
+      },
+    }); // HAYUP
 
     this.peer.on('open', () => {
       console.log('my peer id is', this.peer.id);

@@ -2,32 +2,7 @@ import io from 'socket.io-client';
 import { SOCKET_IO_BACKEND } from './config';
 import type Peer from 'peerjs';
 import { ReplaySubject } from 'rxjs';
-
-export interface WispData {
-  userId?: string;
-  peerId?: string;
-}
-
-export interface WispPositionData {
-  coords: {
-    latitude?: number;
-    longitude?: number;
-  };
-  scope: number;
-}
-
-export type MessageType =
-  | 'login'
-  | 'logout'
-  | 'error'
-  | 'scout'
-  | 'wisps'
-  | 'peer_message'
-  | 'peer_heartbeat';
-
-export class Message<T> {
-  constructor(public type: MessageType, public data?: T) {}
-}
+import { Message, WispData, WispPositionData } from './wisp-models';
 
 export class WispClient {
   private socket: SocketIOClient.Socket;

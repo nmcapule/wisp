@@ -46,8 +46,6 @@ services:
       - ${BACKEND_PEERSERVER_PORT}
     volumes:
       - "$PWD/backend/peerserver:/app"
-    environment:
-      DEBUG: "express:*" 
     networks:
       - network-wisp
   
@@ -55,8 +53,8 @@ services:
     container_name: wisp-storage-redis
     image: redis
     ports:
-      - "${STORAGE_REDIS_PORT}:${STORAGE_REDIS_PORT}"
-    command: "redis-server --port ${STORAGE_REDIS_PORT}"
+      - "${STORAGE_REDIS_PORT}:6379"
+    command: "redis-server --port 6379"
     volumes:
       - "$PWD/dockerdata/redis:/data/redis"
     networks:
@@ -66,7 +64,7 @@ services:
     container_name: wisp-storage-postgres
     image: postgres
     ports:
-      - "${STORAGE_POSTGRES_PORT}:${STORAGE_POSTGRES_PORT}"
+      - "${STORAGE_POSTGRES_PORT}:5432"
     environment:
       POSTGRES_DB: ${STORAGE_POSTGRES_DB}
       POSTGRES_USER: ${STORAGE_POSTGRES_USER}

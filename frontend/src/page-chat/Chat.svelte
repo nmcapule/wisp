@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+
   import Map from './Map.svelte';
   import { WispClient } from '../shared/wisp-client';
-  import { onMount } from 'svelte';
 
   onMount(async () => {
     const wc = await WispClient.create();

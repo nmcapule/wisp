@@ -13,6 +13,7 @@
     "@rollup/plugin-typescript": "^6.0.0",
     "@tsconfig/svelte": "^1.0.0",
     "@types/leaflet": "^1.5.19",
+    "@types/peerjs": "^1.1.0",
     "@types/socket.io-client": "^1.4.34",
     "rollup": "^2.3.4",
     "rollup-plugin-livereload": "^2.0.0",

@@ -18,6 +18,7 @@ export class BlindIoService {
   constructor(private readonly redis: RedisService) {}
 
   async addWisp(socketId: string, data: WispData) {
+    console.log(`add wisp w/ socket id ${socketId}`);
     await this.client.sadd(`sockets::all`, socketId);
     return this.client.set(`socket::${socketId}`, JSON.stringify(data));
   }
@@ -48,7 +49,7 @@ export class BlindIoService {
 
     // TODO: Use location-based sampling.
     const samples = await this.client.srandmember(`sockets::all`, 10);
-    const usersJSON = await this.client.mget(...samples.map((socketId) => `coords::${socketId}`));
+    const usersJSON = await this.client.mget(...samples.map((socketId) => `socket::${socketId}`));
 
     return usersJSON.map((s) => JSON.parse(s));
   }

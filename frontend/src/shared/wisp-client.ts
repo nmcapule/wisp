@@ -1,5 +1,6 @@
 import io, { connect } from 'socket.io-client';
 import { SOCKET_IO_BACKEND } from './config';
+import type Peer from 'peerjs';
 
 export interface WispData {
   userId?: string;
@@ -14,7 +15,13 @@ export interface WispPositionData {
   scope: number;
 }
 
-export type MessageType = 'login' | 'logout' | 'error' | 'scout';
+export type MessageType =
+  | 'login'
+  | 'logout'
+  | 'error'
+  | 'scout'
+  | 'peer_message'
+  | 'peer_heartbeat';
 
 export class Message<T> {
   constructor(public type: MessageType, public data?: T) {}
@@ -22,10 +29,24 @@ export class Message<T> {
 
 export class WispClient {
   socket: SocketIOClient.Socket;
+  peer: Peer;
 
   constructor(backendUrl = SOCKET_IO_BACKEND, connectCallback?: (self: WispClient) => void) {
-    this.socket = io(backendUrl, { transports: ['websocket'] });
-    this.setupEventHandlers(connectCallback);
+    this.peer = new (window as any).Peer(); // HAYUP
+
+    this.peer.on('open', () => {
+      console.log('my peer id is', this.peer.id);
+      this.setupPeerHandlers();
+
+      this.socket = io(backendUrl, { transports: ['websocket'] });
+      this.socket.on('connect', () => {
+        console.log('my socket id is', this.socket.id);
+        this.setupWebSocketHandlers();
+        if (connectCallback) {
+          connectCallback(this);
+        }
+      });
+    });
   }
 
   static create(backendUrl = SOCKET_IO_BACKEND): Promise<WispClient> {
@@ -34,15 +55,13 @@ export class WispClient {
     });
   }
 
-  private setupEventHandlers(connectCallback?: (self: WispClient) => void) {
-    this.socket.on('connect', () => {
-      console.log("Whoops, hey you're connected!");
+  close() {
+    this.socket.close();
+    this.peer.destroy();
+  }
 
-      if (connectCallback) {
-        connectCallback(this);
-      }
-    });
-    this.socket.on('message', (data) => {
+  private setupWebSocketHandlers() {
+    this.socket.on('message', (data: Message<any>) => {
       switch (data.type) {
         case 'login':
           this.handleMessageLogin(data);
@@ -64,7 +83,7 @@ export class WispClient {
 
   login(position: WispPositionData) {
     this.socket.send(
-      new Message<WispData>('login', { peerId: `${Math.random() * 10000}` }),
+      new Message<WispData>('login', { peerId: this.peer.id }),
     );
     this.scout(position);
   }
@@ -85,11 +104,56 @@ export class WispClient {
     console.log('logout', data);
   }
 
-  handleMessageScout(data: Message<any>) {
-    console.log('scout', data);
+  handleMessageScout(data: Message<WispData[]>) {
+    data.data.forEach((wisp) => {
+      if (wisp.peerId === this.peer.id) {
+        return;
+      }
+      this.peerConnect(wisp.peerId);
+    });
   }
 
-  close() {
-    this.socket.close();
+  /** Connection lookup where key = peer id and value is data connection to the peer. */
+  connectionLookup: { [key: string]: Peer.DataConnection } = {};
+
+  private setupPeerHandlers() {
+    this.peer.on('connection', (conn) => {
+      this.connectionLookup[conn.peer] = conn;
+      conn.on('data', (data: Message<any>) => {
+        switch (data.type) {
+          case 'peer_message':
+            this.handlePeerMessage(data);
+            break;
+          case 'peer_heartbeat':
+            // Still needed?
+            break;
+          default:
+            console.error(`unknown p2p data type: ${data.type}`);
+        }
+      });
+    });
+  }
+
+  peerConnect(peerId: string) {
+    const conn = this.peer.connect(peerId);
+    this.connectionLookup[peerId] = conn;
+    conn.on('open', () => {
+      this.peerMessage(peerId, 'ola dora');
+    });
+  }
+
+  peerDisconnect(peerId: string) {
+    const conn = this.connectionLookup[peerId];
+    conn.close();
+
+    delete this.connectionLookup[peerId];
+  }
+
+  peerMessage(peerId: string, message: string) {
+    this.connectionLookup[peerId].send(new Message<string>('peer_message', message));
+  }
+
+  handlePeerMessage(data: Message<string>) {
+    console.log('got message:', data.data);
   }
 }

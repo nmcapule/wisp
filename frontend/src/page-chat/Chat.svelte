@@ -26,7 +26,7 @@
     });
     wispClient.messageObs.subscribe((message) => {
       console.log('got message:', message);
-      messages = [...messages, message];
+      messages = [message, ...messages];
     });
 
     setInterval(() => {
@@ -140,7 +140,7 @@
     <div class="peer-list d-flex flex-column">
       <div class="label d-flex justify-content-between"><span>Pinned</span> <span>📌</span></div>
       {#each messages as msg}
-        <div class="item">{msg.sourceWisp.peerId}: {msg.message}</div>
+        <div class="item">{msg.sourceWisp.peerId.slice(0, 6)}: {msg.message}</div>
       {/each}
     </div>
     <div class="peer-list d-flex flex-column">

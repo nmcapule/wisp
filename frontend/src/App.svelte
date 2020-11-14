@@ -59,6 +59,7 @@
       <a href="/profile" class="item"><span class="nav-text">Profile</span></a>
     </nav>
     <div class="content flex-grow-1 align-self-stretch">
+      <Route path="/" component={Chat} />
       <Route path="/chat" component={Chat} />
       <Route path="/rtc-chat" component={RtcChat} />
     </div>

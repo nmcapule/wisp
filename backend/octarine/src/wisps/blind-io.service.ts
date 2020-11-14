@@ -23,7 +23,9 @@ export class BlindIoService {
   }
 
   async removeWisp(socketId: string) {
+    console.log(`remove wisp w/ socket id ${socketId}`);
     await this.client.srem(`sockets::all`, socketId);
+    await this.client.del(`coords::${socketId}`);
     return this.client.del(`socket::${socketId}`);
   }
 
@@ -46,7 +48,7 @@ export class BlindIoService {
 
     // TODO: Use location-based sampling.
     const samples = await this.client.srandmember(`sockets::all`, 10);
-    const usersJSON = await this.client.mget(...samples);
+    const usersJSON = await this.client.mget(...samples.map((socketId) => `coords::${socketId}`));
 
     return usersJSON.map((s) => JSON.parse(s));
   }

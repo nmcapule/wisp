@@ -1,5 +1,18 @@
 <script lang="ts">
   import Map from './Map.svelte';
+  import { WispClient } from '../shared/wisp-client';
+  import { onMount } from 'svelte';
+
+  onMount(async () => {
+    const wc = await WispClient.create();
+    wc.login({
+      coords: {
+        longitude: Math.random() * 180,
+        latitude: Math.random() * 180,
+      },
+      scope: 3,
+    });
+  });
 
   let showMessageDialog = false;
   let elemMessageInput;

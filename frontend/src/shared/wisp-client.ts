@@ -45,7 +45,14 @@ export class WispClient {
       port: 9000,
       path: '/peerjs',
       config: {
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        iceServers: [
+          // {
+          //   urls: 'turn:139.162.60.22:3478',
+          //   credential: 'nmcapule',
+          //   username: 'nmcapule',
+          // },
+          { urls: 'stun:stun.l.google.com:19302' },
+        ],
         sdpSemantics: 'unified-plan',
       },
     }); // HAYUP

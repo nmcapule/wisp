@@ -11,6 +11,17 @@ export interface WispPositionData {
   scope: number;
 }
 
+export interface WispMessage<T = string> {
+  timestamp: number;
+  sourceWisp: WispData;
+  sourcePosition?: WispPositionData;
+  message: T;
+  signature: string;
+  options?: {
+    whisper?: boolean;
+  };
+}
+
 export type MessageType =
   | 'login'
   | 'logout'

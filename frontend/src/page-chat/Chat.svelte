@@ -3,12 +3,16 @@
 
   import Map from './Map.svelte';
   import { WispClient } from '../shared/wisp-client';
+  import type { WispMessage } from '../shared/wisp-models';
 
   let countWisps = 0;
+  let wispClient: WispClient;
+
+  let messages: WispMessage[] = [];
 
   onMount(async () => {
-    const wc = await WispClient.create();
-    wc.login({
+    wispClient = await WispClient.create();
+    wispClient.login({
       coords: {
         longitude: Math.random() * 180,
         latitude: Math.random() * 180,
@@ -17,12 +21,16 @@
     });
 
     // Possible memory leak.
-    wc.countWispsObs.subscribe((count) => {
+    wispClient.countWispsObs.subscribe((count) => {
       countWisps = count;
+    });
+    wispClient.messageObs.subscribe((message) => {
+      console.log('got message:', message);
+      messages = [...messages, message];
     });
 
     setInterval(() => {
-      wc.countWisps();
+      wispClient.countWisps();
     }, 3000);
   });
 
@@ -48,7 +56,7 @@
   }
 
   function sendMessage(s: string) {
-    alert(`send message: ${s}`);
+    wispClient.broadcastMessage(s);
   }
 </script>
 
@@ -131,9 +139,9 @@
     </div>
     <div class="peer-list d-flex flex-column">
       <div class="label d-flex justify-content-between"><span>Pinned</span> <span>📌</span></div>
-      <div class="item" />
-      <div class="item" />
-      <div class="item" />
+      {#each messages as msg}
+        <div class="item">{msg.sourceWisp.peerId}: {msg.message}</div>
+      {/each}
     </div>
     <div class="peer-list d-flex flex-column">
       <div class="label d-flex justify-content-between"><span>Peers</span> <span>🤝</span></div>

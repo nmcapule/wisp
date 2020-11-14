@@ -44,6 +44,10 @@ export class BlindIoService {
     return JSON.parse(s);
   }
 
+  async countWisps() {
+    return await this.client.scard(`sockets::all`);
+  }
+
   async findNearbyWisps(socketId: string, data: WispPositionData): Promise<WispData[]> {
     await this.placeWisp(socketId, data);
 

@@ -4,6 +4,8 @@
   import Map from './Map.svelte';
   import { WispClient } from '../shared/wisp-client';
 
+  let countWisps = 0;
+
   onMount(async () => {
     const wc = await WispClient.create();
     wc.login({
@@ -13,6 +15,15 @@
       },
       scope: 3,
     });
+
+    // Possible memory leak.
+    wc.countWispsObs.subscribe((count) => {
+      countWisps = count;
+    });
+
+    setInterval(() => {
+      wc.countWisps();
+    }, 3000);
   });
 
   let showMessageDialog = false;
@@ -133,7 +144,7 @@
   </div>
   <div class="page-content flex-grow-1 position-relative">
     <div class="wisp-overlay d-flex justify-content-end align-items-start">
-      <div class="online-indicator interactive">396 wisps online @heywisp.io</div>
+      <div class="online-indicator interactive">{countWisps} wisps online @heywisp.io</div>
     </div>
     <div class="wisp-overlay d-flex justify-content-end align-items-end">
       <div

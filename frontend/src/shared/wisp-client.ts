@@ -1,6 +1,7 @@
-import io, { connect } from 'socket.io-client';
+import io from 'socket.io-client';
 import { SOCKET_IO_BACKEND } from './config';
 import type Peer from 'peerjs';
+import { ReplaySubject } from 'rxjs';
 
 export interface WispData {
   userId?: string;
@@ -20,6 +21,7 @@ export type MessageType =
   | 'logout'
   | 'error'
   | 'scout'
+  | 'wisps'
   | 'peer_message'
   | 'peer_heartbeat';
 
@@ -28,8 +30,14 @@ export class Message<T> {
 }
 
 export class WispClient {
-  socket: SocketIOClient.Socket;
-  peer: Peer;
+  private socket: SocketIOClient.Socket;
+  private peer: Peer;
+
+  /** Connection lookup where key = peer id and value is data connection to the peer. */
+  private connectionLookup: { [key: string]: Peer.DataConnection } = {};
+
+  countWispsObs = new ReplaySubject<number>();
+  connectionsObs = new ReplaySubject<{ [key: string]: Peer.DataConnection }>();
 
   constructor(backendUrl = SOCKET_IO_BACKEND, connectCallback?: (self: WispClient) => void) {
     this.peer = new (window as any).Peer(null, {
@@ -41,19 +49,28 @@ export class WispClient {
         sdpSemantics: 'unified-plan',
       },
     }); // HAYUP
+    this.setupPeerHandlers();
+    this.socket = io(backendUrl, { transports: ['websocket'] });
+    this.setupWebSocketHandlers();
 
-    this.peer.on('open', () => {
-      console.log('my peer id is', this.peer.id);
-      this.setupPeerHandlers();
+    const peerPromise = new Promise((resolve, reject) => {
+      this.peer.on('open', () => {
+        console.log('my peer id is', this.peer.id);
+        resolve(this.peer);
+      });
+    });
 
-      this.socket = io(backendUrl, { transports: ['websocket'] });
+    const socketPromise = new Promise((resolve, reject) => {
       this.socket.on('connect', () => {
         console.log('my socket id is', this.socket.id);
-        this.setupWebSocketHandlers();
-        if (connectCallback) {
-          connectCallback(this);
-        }
+        resolve(this.socket);
       });
+    });
+
+    Promise.all([peerPromise, socketPromise]).then(() => {
+      if (connectCallback) {
+        connectCallback(this);
+      }
     });
   }
 
@@ -66,6 +83,9 @@ export class WispClient {
   close() {
     this.socket.close();
     this.peer.destroy();
+
+    this.countWispsObs.complete();
+    this.connectionsObs.complete();
   }
 
   private setupWebSocketHandlers() {
@@ -79,6 +99,9 @@ export class WispClient {
           break;
         case 'scout':
           this.handleMessageScout(data);
+          break;
+        case 'wisps':
+          this.handleCountWisps(data);
           break;
         case 'error':
           console.error(data);
@@ -104,15 +127,19 @@ export class WispClient {
     this.socket.send(new Message<WispPositionData>('scout', position));
   }
 
-  handleMessageLogin(data: Message<any>) {
+  countWisps() {
+    this.socket.send(new Message<void>('wisps'));
+  }
+
+  private handleMessageLogin(data: Message<any>) {
     console.log('login', data);
   }
 
-  handleMessageLogout(data: Message<any>) {
+  private handleMessageLogout(data: Message<any>) {
     console.log('logout', data);
   }
 
-  handleMessageScout(data: Message<WispData[]>) {
+  private handleMessageScout(data: Message<WispData[]>) {
     data.data.forEach((wisp) => {
       if (wisp.peerId === this.peer.id) {
         return;
@@ -121,12 +148,15 @@ export class WispClient {
     });
   }
 
-  /** Connection lookup where key = peer id and value is data connection to the peer. */
-  connectionLookup: { [key: string]: Peer.DataConnection } = {};
+  private handleCountWisps(data: Message<number>) {
+    const count = data.data;
+    this.countWispsObs.next(count);
+  }
 
   private setupPeerHandlers() {
     this.peer.on('connection', (conn) => {
       this.connectionLookup[conn.peer] = conn;
+      this.connectionsObs.next(this.connectionLookup);
       conn.on('data', (data: Message<any>) => {
         switch (data.type) {
           case 'peer_message':
@@ -145,8 +175,9 @@ export class WispClient {
   peerConnect(peerId: string) {
     const conn = this.peer.connect(peerId);
     this.connectionLookup[peerId] = conn;
+    this.connectionsObs.next(this.connectionLookup);
     conn.on('open', () => {
-      this.peerMessage(peerId, 'ola dora');
+      this.peerMessage(peerId, `ola dora from ${this.peer.id}`);
     });
   }
 
@@ -155,13 +186,14 @@ export class WispClient {
     conn.close();
 
     delete this.connectionLookup[peerId];
+    this.connectionsObs.next(this.connectionLookup);
   }
 
   peerMessage(peerId: string, message: string) {
     this.connectionLookup[peerId].send(new Message<string>('peer_message', message));
   }
 
-  handlePeerMessage(data: Message<string>) {
+  private handlePeerMessage(data: Message<string>) {
     console.log('got message:', data.data);
   }
 }

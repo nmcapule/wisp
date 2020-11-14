@@ -32,6 +32,9 @@ export class WispsGateway implements OnGatewayConnection<Socket>, OnGatewayDisco
       case 'scout':
         this.handleScout(client, message);
         break;
+      case 'wisps':
+        this.handleCountWisps(client);
+        break;
       default:
         client.send(new Message('error', `unknown message type: ${message.type}`));
     }
@@ -76,5 +79,10 @@ export class WispsGateway implements OnGatewayConnection<Socket>, OnGatewayDisco
 
     // Reply list of users.
     client.send(new Message<WispData[]>('scout', users));
+  }
+
+  async handleCountWisps(client: Socket) {
+    const count = await this.blindIoService.countWisps();
+    client.send(new Message<number>('wisps', count));
   }
 }

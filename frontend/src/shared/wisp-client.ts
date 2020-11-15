@@ -35,6 +35,7 @@ export class WispClient {
   }
 
   close() {
+    this.peerClient.close();
     this.socket.close();
     this.countWispsObs.complete();
   }

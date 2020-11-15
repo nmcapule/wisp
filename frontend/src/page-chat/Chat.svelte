@@ -1,14 +1,17 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
 
   import Map from './Map.svelte';
   import { WispClient } from '../shared/wisp-client';
   import type { WispMessage } from '../shared/wisp-models';
+  import { ReplaySubject } from 'rxjs';
+  import { takeUntil } from 'rxjs/operators';
 
   let countWisps = 0;
   let wispClient: WispClient;
 
   let messages: WispMessage[] = [];
+  let destroyedObs = new ReplaySubject<void>();
 
   onMount(async () => {
     wispClient = await WispClient.create();
@@ -20,18 +23,19 @@
       scope: 3,
     });
 
-    // Possible memory leak.
-    wispClient.countWispsObs.subscribe((count) => {
+    wispClient.countWispsObs.pipe(takeUntil(destroyedObs)).subscribe((count) => {
       countWisps = count;
     });
-    wispClient.messageObs.subscribe((message) => {
+    wispClient.messageObs.pipe(takeUntil(destroyedObs)).subscribe((message) => {
       console.log('got message:', message);
       messages = [message, ...messages];
     });
+  });
 
-    setInterval(() => {
-      wispClient.countWisps();
-    }, 3000);
+  onDestroy(() => {
+    wispClient.close();
+    destroyedObs.next();
+    destroyedObs.complete();
   });
 
   let showMessageDialog = false;
@@ -140,7 +144,9 @@
     <div class="peer-list d-flex flex-column">
       <div class="label d-flex justify-content-between"><span>Pinned</span> <span>📌</span></div>
       {#each messages as msg}
-        <div class="item">{msg.sourceWisp.peerId.slice(0, 6)}: {msg.message}</div>
+        <div class="item" style="overflow-y: auto; height: 8em">
+          <code>{JSON.stringify(msg)}</code>
+        </div>
       {/each}
     </div>
     <div class="peer-list d-flex flex-column">

@@ -4,11 +4,18 @@ import hash from 'object-hash';
 
 import { PEERJS_BACKEND_HOST, PEERJS_BACKEND_PORT } from './config';
 import { MessageStore } from './message-store';
-import { Message, WispMessage } from './wisp-models';
+import { Message, WispData, WispMessage } from './wisp-models';
+
+export interface PeerClientOptions {
+  host?: string;
+  port?: string;
+  pinned?: WispData[];
+}
 
 export class PeerClient {
   private peer: Peer;
   private messages = new MessageStore();
+  private pinned: { [key: string]: WispData } = {};
 
   /** Connection lookup where key = peer id and value is data connection to the peer. */
   private connectionLookup: { [key: string]: Peer.DataConnection } = {};
@@ -17,10 +24,10 @@ export class PeerClient {
   /** Everytime there's a new message, emit me. */
   messageObs = new ReplaySubject<WispMessage>();
 
-  constructor(
-    options = { host: PEERJS_BACKEND_HOST, port: PEERJS_BACKEND_PORT },
-    connectCallback?: (self: PeerClient) => void,
-  ) {
+  /** Everytime pinned changes, emit me. */
+  pinnedObs = new ReplaySubject<{ [key: string]: WispData }>();
+
+  constructor(options?: PeerClientOptions, connectCallback?: (self: PeerClient) => void) {
     this.peer = new (window as any).Peer(null, {
       host: options.host,
       port: options.port,
@@ -43,11 +50,12 @@ export class PeerClient {
     });
   }
 
-  static create(
-    backendUrl = { host: PEERJS_BACKEND_HOST, port: PEERJS_BACKEND_PORT },
-  ): Promise<PeerClient> {
+  static create(options: PeerClientOptions = {}): Promise<PeerClient> {
+    options.host = options?.host || PEERJS_BACKEND_HOST;
+    options.port = options?.port || PEERJS_BACKEND_PORT;
+
     return new Promise((resolve, reject) => {
-      new PeerClient(backendUrl, resolve);
+      new PeerClient(options, resolve);
     });
   }
 
@@ -55,6 +63,21 @@ export class PeerClient {
     this.peer.destroy();
     this.connectionsObs.complete();
     this.messageObs.complete();
+    this.pinnedObs.complete();
+  }
+
+  addToPinned(...wisps: WispData[]) {
+    wisps.forEach((wisp) => {
+      this.pinned[hash(wisp)] = wisp;
+    });
+    this.pinnedObs.next(this.pinned);
+  }
+
+  removeFromPinned(...wisps: WispData[]) {
+    wisps.forEach((wisp) => {
+      delete this.pinned[hash(wisp)];
+    });
+    this.pinnedObs.next(this.pinned);
   }
 
   private setupPeerHandlers(peerId: string, conn: Peer.DataConnection) {

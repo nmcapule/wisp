@@ -75,7 +75,7 @@
   }
 
   function sendMessage(s: string) {
-    wispClient.broadcastMessage(s);
+    messageStore.set(wispClient.broadcastMessage(s));
   }
 </script>
 

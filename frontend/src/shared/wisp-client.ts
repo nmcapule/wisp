@@ -57,7 +57,7 @@ export class WispClient {
   }
 
   broadcastMessage(message: string, options?: {}) {
-    this.peerClient.peerBroadcast(message, options);
+    return this.peerClient.peerBroadcast(message, options);
   }
 
   private setupWebSocketHandlers() {

@@ -226,6 +226,7 @@ export class PeerClient {
       conn.send(new Message<WispMessage>('peer_message', wispMessage));
       this.peerPing(peerId);
     });
+    return wispMessage;
   }
 
   /**

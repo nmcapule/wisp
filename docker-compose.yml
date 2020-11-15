@@ -46,6 +46,8 @@ services:
       - ${BACKEND_PEERSERVER_PORT}
     volumes:
       - "$PWD/backend/peerserver:/app"
+    environment:
+      DEBUG: "express:*"
     networks:
       - network-wisp
   

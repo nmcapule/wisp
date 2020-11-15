@@ -259,6 +259,7 @@ export class PeerClient {
       }
       console.debug('rebroadcast to', peerId);
       conn.send(new Message<WispMessage>('peer_message', data.data));
+      this.peerPing(peerId);
     });
   }
 

@@ -187,6 +187,9 @@
     </div>
     <div class="peer-list d-flex flex-column">
       <div class="label d-flex justify-content-between"><span>Peers</span> <span>🤝</span></div>
+      {#each Object.entries(connections) as [peerId, pc]}
+        <div class="item">{peerId}: last seen {new Date(pc.lastMessageTimestamp)}</div>
+      {/each}
       <div class="item" />
       <div class="item" />
       <div class="item" />

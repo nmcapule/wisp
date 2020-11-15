@@ -66,9 +66,9 @@ export class PeerClient {
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
           {
-            urls: 'turn:139.162.60.22:3478',
-            credential: 'nmcapule',
-            username: 'nmcapule',
+            urls: 'turn:139.162.xx.xx:3478',
+            credential: 'xxxxxxxx',
+            username: 'xxxxxxxx',
           },
           // { urls: 'turn:0.peerjs.com:3478', username: 'peerjs', credential: 'peerjsp' },
         ],

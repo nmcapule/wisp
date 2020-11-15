@@ -34,8 +34,8 @@ export class WispClient {
 
   static create(backendUrl = SOCKET_IO_BACKEND): Promise<WispClient> {
     return new Promise(async (resolve, reject) => {
-      const peerClient = await PeerClient.create();
       const geoClient = await GeoClient.create();
+      const peerClient = await PeerClient.create(geoClient);
 
       new WispClient(peerClient, geoClient, backendUrl, resolve);
     });

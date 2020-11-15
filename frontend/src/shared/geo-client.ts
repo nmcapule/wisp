@@ -8,6 +8,8 @@ export class GeoClient {
   cacheConfidence = 0;
   lastCacheTimestamp = 0;
 
+  randomizer = 0.25;
+
   static create() {
     return new GeoClient();
   }
@@ -17,20 +19,27 @@ export class GeoClient {
       return this.cache;
     }
 
-    if (navigator?.geolocation) {
-      // TODO: [Violation] Only request geolocation information in response to a user gesture.
-      const position: any = await new Promise((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject),
-      );
-      if (position) {
-        this.cache = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        };
-        this.cacheConfidence = 3;
-        this.lastCacheTimestamp = new Date().getTime();
-        return this.cache;
+    const vlat = Math.random() * this.randomizer - this.randomizer / 2;
+    const vlng = Math.random() * this.randomizer - this.randomizer / 2;
+
+    try {
+      if (navigator?.geolocation) {
+        // TODO: [Violation] Only request geolocation information in response to a user gesture.
+        const position: any = await new Promise((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject),
+        );
+        if (position) {
+          this.cache = {
+            latitude: position.coords.latitude + vlat,
+            longitude: position.coords.longitude + vlng,
+          };
+          this.cacheConfidence = 3;
+          this.lastCacheTimestamp = new Date().getTime();
+          return this.cache;
+        }
       }
+    } catch (e) {
+      console.warn('geolocation failed. fallback to ip-based location.');
     }
 
     // Fallback to IP-based location if GeoLocation API is not successful.
@@ -39,8 +48,8 @@ export class GeoClient {
     // Removes stray chars from geoplugin API.
     const geo = JSON.parse(text.slice(4, text.length - 1));
 
-    const latitude = geo['geoplugin_latitude'];
-    const longitude = geo['geoplugin_longitude'];
+    const latitude = Number(geo['geoplugin_latitude']) + vlat;
+    const longitude = Number(geo['geoplugin_longitude']) + vlng;
 
     this.cache = { latitude, longitude };
     this.cacheConfidence = 1;

@@ -5,6 +5,7 @@ import hash from 'object-hash';
 import { PEERJS_BACKEND_HOST, PEERJS_BACKEND_PORT } from './config';
 import { MessageStore } from './message-store';
 import { Message, WispData, WispMessage } from './wisp-models';
+import type { GeoClient } from './geo-client';
 
 export interface PeerClientOptions {
   host?: string;
@@ -34,6 +35,8 @@ export class PeerConnection {
 }
 
 export class PeerClient {
+  private geoClient: GeoClient;
+
   private peer: Peer;
   private messages = new MessageStore();
   private pinned: { [key: string]: WispData } = {};
@@ -48,7 +51,12 @@ export class PeerClient {
   /** Everytime pinned changes, emit me. */
   pinnedObs = new ReplaySubject<{ [key: string]: WispData }>();
 
-  constructor(options?: PeerClientOptions, connectCallback?: (self: PeerClient) => void) {
+  constructor(
+    geoClient: GeoClient,
+    options?: PeerClientOptions,
+    connectCallback?: (self: PeerClient) => void,
+  ) {
+    this.geoClient = geoClient;
     this.peer = new (window as any).Peer(null, {
       host: options.host,
       port: options.port,
@@ -66,9 +74,6 @@ export class PeerClient {
 
     this.peer.on('connection', (conn) => {
       this.setupPeerHandlers(conn.peer, conn);
-
-      this.connectionLookup[conn.peer] = new PeerConnection(conn);
-      this.connectionsObs.next(this.connectionLookup);
     });
 
     this.peer.on('open', () => {
@@ -77,12 +82,12 @@ export class PeerClient {
     });
   }
 
-  static create(options: PeerClientOptions = {}): Promise<PeerClient> {
+  static create(geoClient: GeoClient, options: PeerClientOptions = {}): Promise<PeerClient> {
     options.host = options?.host || PEERJS_BACKEND_HOST;
     options.port = options?.port || PEERJS_BACKEND_PORT;
 
     return new Promise((resolve, reject) => {
-      new PeerClient(options, resolve);
+      new PeerClient(geoClient, options, resolve);
     });
   }
 
@@ -126,14 +131,16 @@ export class PeerClient {
 
   private setupPeerHandlers(peerId: string, conn: Peer.DataConnection) {
     conn.on('open', () => {
+      this.connectionLookup[conn.peer] = new PeerConnection(conn);
       this.connectionLookup[peerId].dataConnectionOpened = true;
+      this.connectionsObs.next(this.connectionLookup);
 
       if (Math.random() > 0.9) {
         console.log('oops... sorry I shouted');
 
         this.peerMessage(peerId, `OLA DORA!!!`, { whisper: false });
       } else {
-        this.peerMessage(peerId, `ola dora`, { whisper: true });
+        this.peerMessage(peerId, `heya welcome to the club!`, { whisper: true });
       }
     });
     conn.on('close', () => {
@@ -174,9 +181,6 @@ export class PeerClient {
   peerConnect(peerId: string) {
     const conn = this.peer.connect(peerId);
     this.setupPeerHandlers(peerId, conn);
-
-    this.connectionLookup[peerId] = new PeerConnection(conn);
-    this.connectionsObs.next(this.connectionLookup);
   }
 
   peerDisconnect(peerId: string) {
@@ -192,6 +196,10 @@ export class PeerClient {
       timestamp: new Date().getTime(),
       message,
       sourceWisp: { peerId: this.peerId },
+      sourcePosition: {
+        coords: this.geoClient.cache,
+        scope: 3,
+      },
       options,
     };
     const wispMessage: WispMessage = {

@@ -8,6 +8,7 @@
 
   import type { WispMessage, WispPositionData } from '../shared/wisp-models';
   import type { PeerConnection } from '../shared/peer-client';
+  import { messageStore } from './store';
 
   let countWisps = 0;
   let position: WispPositionData;
@@ -29,6 +30,8 @@
     });
     wispClient.messageObs.pipe(takeUntil(destroyedObs)).subscribe((message) => {
       console.log('got message:', message);
+      messageStore.set(message);
+
       messages = [message, ...messages];
     });
     wispClient.connectionsObs.pipe(takeUntil(destroyedObs)).subscribe((res) => {

@@ -1,12 +1,28 @@
 <script lang="ts">
   import L from 'leaflet';
-  import type { WispPositionData } from '../shared/wisp-models';
+  import type { WispMessage, WispPositionData } from '../shared/wisp-models';
+  import { messageStore } from './store';
 
   export let position: WispPositionData;
   export let markers: WispPositionData[] = [];
 
   let map: L.Map;
   let mapMarkers: L.Marker[] = [];
+
+  messageStore.subscribe((message: WispMessage) => {
+    if (!map) {
+      return;
+    }
+
+    const popup = L.popup()
+      .setLatLng([message.sourcePosition.coords.latitude, message.sourcePosition.coords.longitude])
+      .setContent(`<pre>${message.message}</pre>`)
+      .addTo(map);
+
+    setTimeout(() => {
+      popup.removeFrom(map);
+    }, 5000);
+  });
 
   $: resetMapView(map, position);
   $: setMarkers(map, markers);
@@ -37,7 +53,7 @@
         &copy;<a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>,
           &copy;<a href="https://carto.com/attributions" target="_blank">CARTO</a>`,
       subdomains: 'abcd',
-      maxZoom: 14,
+      maxZoom: 16,
       minZoom: 2,
     }).addTo(created);
     return created;

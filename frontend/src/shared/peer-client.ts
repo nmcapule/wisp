@@ -107,6 +107,23 @@ export class PeerClient {
     this.pinnedObs.next(this.pinned);
   }
 
+  replaceConnections(...wisps: WispData[]) {
+    const legacyPeerIds = new Set<string>(Object.keys(this.connectionLookup));
+
+    // After this procedure, ids that are left in legacyPeerIds should be disconnected.
+    wisps.forEach((wisp) => {
+      if (legacyPeerIds.has(wisp.peerId)) {
+        legacyPeerIds.delete(wisp.peerId);
+        return;
+      }
+      this.peerConnect(wisp.peerId);
+    });
+
+    legacyPeerIds.forEach((peerId) => {
+      this.peerDisconnect(peerId);
+    });
+  }
+
   private setupPeerHandlers(peerId: string, conn: Peer.DataConnection) {
     conn.on('open', () => {
       this.connectionLookup[peerId].dataConnectionOpened = true;

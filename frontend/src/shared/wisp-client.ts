@@ -2,20 +2,25 @@ import io from 'socket.io-client';
 import { SOCKET_IO_BACKEND } from './config';
 import { ReplaySubject } from 'rxjs';
 import { Message, WispData, WispPositionData } from './wisp-models';
-import { PeerClient, PEER_PING_TIMEOUT_MS } from './peer-client';
+import { PeerClient } from './peer-client';
+import { GeoClient } from './geo-client';
 
 export class WispClient {
   private socket: SocketIOClient.Socket;
   private peerClient: PeerClient;
+  private geoClient: GeoClient;
 
   countWispsObs = new ReplaySubject<number>();
+  positionObs = new ReplaySubject<WispPositionData>();
 
   constructor(
     peerClient: PeerClient,
+    geoClient: GeoClient,
     backendUrl = SOCKET_IO_BACKEND,
     connectCallback?: (self: WispClient) => void,
   ) {
     this.peerClient = peerClient;
+    this.geoClient = geoClient;
     this.socket = io(backendUrl, { transports: ['websocket'] });
     this.setupWebSocketHandlers();
 
@@ -30,7 +35,9 @@ export class WispClient {
   static create(backendUrl = SOCKET_IO_BACKEND): Promise<WispClient> {
     return new Promise(async (resolve, reject) => {
       const peerClient = await PeerClient.create();
-      new WispClient(peerClient, backendUrl, resolve);
+      const geoClient = await GeoClient.create();
+
+      new WispClient(peerClient, geoClient, backendUrl, resolve);
     });
   }
 
@@ -38,6 +45,7 @@ export class WispClient {
     this.peerClient.close();
     this.socket.close();
     this.countWispsObs.complete();
+    this.positionObs.complete();
   }
 
   /** Rehosted stuff. */
@@ -76,7 +84,15 @@ export class WispClient {
     });
   }
 
-  login(position: WispPositionData) {
+  async login(position?: WispPositionData) {
+    if (!position) {
+      position = {
+        coords: await this.geoClient.locate(),
+        scope: 3,
+      };
+    }
+    this.positionObs.next(position);
+
     this.socket.send(
       new Message<WispData>('login', { peerId: this.peerClient.peerId }),
     );
@@ -104,12 +120,8 @@ export class WispClient {
   }
 
   private handleMessageScout(data: Message<WispData[]>) {
-    data.data.forEach((wisp) => {
-      if (wisp.peerId === this.peerClient.peerId) {
-        return;
-      }
-      this.peerClient.peerConnect(wisp.peerId);
-    });
+    const scoutedWisps = data.data.filter((wisp) => wisp.peerId !== this.peerClient.peerId);
+    this.peerClient.replaceConnections(...scoutedWisps);
   }
 
   private handleCountWisps(data: Message<number>) {

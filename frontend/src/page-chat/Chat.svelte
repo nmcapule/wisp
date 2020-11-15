@@ -6,10 +6,11 @@
   import Map from './Map.svelte';
   import { WispClient } from '../shared/wisp-client';
 
-  import type { WispMessage } from '../shared/wisp-models';
+  import type { WispMessage, WispPositionData } from '../shared/wisp-models';
   import type { PeerConnection } from '../shared/peer-client';
 
   let countWisps = 0;
+  let position: WispPositionData;
   let connections: { [key: string]: PeerConnection } = {};
   let wispClient: WispClient;
 
@@ -18,16 +19,13 @@
 
   onMount(async () => {
     wispClient = await WispClient.create();
-    wispClient.login({
-      coords: {
-        longitude: Math.random() * 180,
-        latitude: Math.random() * 180,
-      },
-      scope: 3,
-    });
+    wispClient.login();
 
     wispClient.countWispsObs.pipe(takeUntil(destroyedObs)).subscribe((count) => {
       countWisps = count;
+    });
+    wispClient.positionObs.pipe(takeUntil(destroyedObs)).subscribe((res) => {
+      position = res;
     });
     wispClient.messageObs.pipe(takeUntil(destroyedObs)).subscribe((message) => {
       console.log('got message:', message);
@@ -196,6 +194,6 @@
     </div>
   </div>
   <div class="page-content flex-grow-1 position-relative">
-    <Map />
+    <Map {position} markers={[position]} />
   </div>
 </div>

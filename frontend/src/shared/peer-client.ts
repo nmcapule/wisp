@@ -63,15 +63,13 @@ export class PeerClient {
       path: '/peerjs',
       config: {
         iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
           {
             urls: 'turn:139.162.60.22:3478',
             credential: 'nmcapule',
             username: 'nmcapule',
           },
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'stun:stun2.l.google.com:19302' },
-          { urls: 'stun:stun3.l.google.com:19302' },
           // { urls: 'turn:0.peerjs.com:3478', username: 'peerjs', credential: 'peerjsp' },
         ],
         // sdpSemantics: 'unified-plan',

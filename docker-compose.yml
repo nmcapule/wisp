@@ -46,8 +46,8 @@ services:
       - ${BACKEND_PEERSERVER_PORT}
     volumes:
       - "$PWD/backend/peerserver:/app"
-    # environment:
-    #   DEBUG: "express:*" 
+    environment:
+      DEBUG: "express:*"
     networks:
       - network-wisp
   
@@ -55,10 +55,8 @@ services:
     container_name: wisp-storage-redis
     image: redis
     ports:
-      - "${STORAGE_REDIS_PORT}:${STORAGE_REDIS_PORT}"
-    # expose:
-    #   - ${STORAGE_REDIS_PORT}
-    command: "redis-server --port ${STORAGE_REDIS_PORT}"
+      - "${STORAGE_REDIS_PORT}:6379"
+    command: "redis-server --port 6379"
     volumes:
       - "$PWD/dockerdata/redis:/data/redis"
     networks:
@@ -68,9 +66,7 @@ services:
     container_name: wisp-storage-postgres
     image: postgres
     ports:
-      - "${STORAGE_POSTGRES_PORT}:${STORAGE_POSTGRES_PORT}"
-    # expose:
-    #   - ${STORAGE_POSTGRES_PORT}
+      - "${STORAGE_POSTGRES_PORT}:5432"
     environment:
       POSTGRES_DB: ${STORAGE_POSTGRES_DB}
       POSTGRES_USER: ${STORAGE_POSTGRES_USER}
@@ -83,12 +79,12 @@ services:
       - network-wisp
 
   # -- disabled until we can make this work.
-  # backend-coturn:
-  #   image: instrumentisto/coturn:4.5.1.3
-  #   restart: always
-  #   network_mode: "host"
-  #   volumes:
-  #     - "$PWD/storage/coturn/turnserver.conf:/etc/coturn/turnserver.conf"
+  backend-coturn:
+    image: instrumentisto/coturn:4.5.1.3
+    restart: always
+    network_mode: "host"
+    volumes:
+      - "$PWD/storage/coturn/turnserver.conf:/etc/coturn/turnserver.conf"
 
   frontend:
     privileged: true

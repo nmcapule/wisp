@@ -5,6 +5,14 @@ body {
   height: 100%;
 }
 
+html,
+body {
+  overflow: hidden;
+}
+body {
+  position: relative;
+}
+
 body {
   color: #333;
   margin: 0;

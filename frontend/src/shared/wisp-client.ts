@@ -1,80 +1,31 @@
 import io from 'socket.io-client';
 import { SOCKET_IO_BACKEND } from './config';
-import type Peer from 'peerjs';
 import { ReplaySubject } from 'rxjs';
-
-export interface WispData {
-  userId?: string;
-  peerId?: string;
-}
-
-export interface WispPositionData {
-  coords: {
-    latitude?: number;
-    longitude?: number;
-  };
-  scope: number;
-}
-
-export type MessageType =
-  | 'login'
-  | 'logout'
-  | 'error'
-  | 'scout'
-  | 'wisps'
-  | 'peer_message'
-  | 'peer_heartbeat';
-
-export class Message<T> {
-  constructor(public type: MessageType, public data?: T) {}
-}
+import { Message, WispData, WispPositionData } from './wisp-models';
+import { PeerClient } from './peer-client';
+import { GeoClient } from './geo-client';
 
 export class WispClient {
   private socket: SocketIOClient.Socket;
-  private peer: Peer;
-
-  /** Connection lookup where key = peer id and value is data connection to the peer. */
-  private connectionLookup: { [key: string]: Peer.DataConnection } = {};
+  private peerClient: PeerClient;
+  private geoClient: GeoClient;
 
   countWispsObs = new ReplaySubject<number>();
-  connectionsObs = new ReplaySubject<{ [key: string]: Peer.DataConnection }>();
+  positionObs = new ReplaySubject<WispPositionData>();
 
-  constructor(backendUrl = SOCKET_IO_BACKEND, connectCallback?: (self: WispClient) => void) {
-    this.peer = new (window as any).Peer(null, {
-      host: 'localhost',
-      port: 9000,
-      path: '/peerjs',
-      config: {
-        iceServers: [
-          // {
-          //   urls: 'turn:139.162.60.22:3478',
-          //   credential: 'nmcapule',
-          //   username: 'nmcapule',
-          // },
-          { urls: 'stun:stun.l.google.com:19302' },
-        ],
-        sdpSemantics: 'unified-plan',
-      },
-    }); // HAYUP
-    this.setupPeerHandlers();
+  constructor(
+    peerClient: PeerClient,
+    geoClient: GeoClient,
+    backendUrl = SOCKET_IO_BACKEND,
+    connectCallback?: (self: WispClient) => void,
+  ) {
+    this.peerClient = peerClient;
+    this.geoClient = geoClient;
     this.socket = io(backendUrl, { transports: ['websocket'] });
     this.setupWebSocketHandlers();
 
-    const peerPromise = new Promise((resolve, reject) => {
-      this.peer.on('open', () => {
-        console.log('my peer id is', this.peer.id);
-        resolve(this.peer);
-      });
-    });
-
-    const socketPromise = new Promise((resolve, reject) => {
-      this.socket.on('connect', () => {
-        console.log('my socket id is', this.socket.id);
-        resolve(this.socket);
-      });
-    });
-
-    Promise.all([peerPromise, socketPromise]).then(() => {
+    this.socket.on('connect', async () => {
+      console.log('my socket id is', this.socket.id);
       if (connectCallback) {
         connectCallback(this);
       }
@@ -82,17 +33,31 @@ export class WispClient {
   }
 
   static create(backendUrl = SOCKET_IO_BACKEND): Promise<WispClient> {
-    return new Promise((resolve, reject) => {
-      new WispClient(backendUrl, resolve);
+    return new Promise(async (resolve, reject) => {
+      const geoClient = await GeoClient.create();
+      const peerClient = await PeerClient.create(geoClient);
+
+      new WispClient(peerClient, geoClient, backendUrl, resolve);
     });
   }
 
   close() {
+    this.peerClient.close();
     this.socket.close();
-    this.peer.destroy();
-
     this.countWispsObs.complete();
-    this.connectionsObs.complete();
+    this.positionObs.complete();
+  }
+
+  /** Rehosted stuff. */
+  get messageObs() {
+    return this.peerClient.messageObs;
+  }
+  get connectionsObs() {
+    return this.peerClient.connectionsObs;
+  }
+
+  broadcastMessage(message: string, options?: {}) {
+    return this.peerClient.peerBroadcast(message, options);
   }
 
   private setupWebSocketHandlers() {
@@ -119,9 +84,17 @@ export class WispClient {
     });
   }
 
-  login(position: WispPositionData) {
+  async login(position?: WispPositionData) {
+    if (!position) {
+      position = {
+        coords: await this.geoClient.locate(),
+        scope: 3,
+      };
+    }
+    this.positionObs.next(position);
+
     this.socket.send(
-      new Message<WispData>('login', { peerId: this.peer.id }),
+      new Message<WispData>('login', { peerId: this.peerClient.peerId }),
     );
     this.scout(position);
   }
@@ -147,60 +120,12 @@ export class WispClient {
   }
 
   private handleMessageScout(data: Message<WispData[]>) {
-    data.data.forEach((wisp) => {
-      if (wisp.peerId === this.peer.id) {
-        return;
-      }
-      this.peerConnect(wisp.peerId);
-    });
+    const scoutedWisps = data.data.filter((wisp) => wisp.peerId !== this.peerClient.peerId);
+    this.peerClient.replaceConnections(...scoutedWisps);
   }
 
   private handleCountWisps(data: Message<number>) {
     const count = data.data;
     this.countWispsObs.next(count);
-  }
-
-  private setupPeerHandlers() {
-    this.peer.on('connection', (conn) => {
-      this.connectionLookup[conn.peer] = conn;
-      this.connectionsObs.next(this.connectionLookup);
-      conn.on('data', (data: Message<any>) => {
-        switch (data.type) {
-          case 'peer_message':
-            this.handlePeerMessage(data);
-            break;
-          case 'peer_heartbeat':
-            // Still needed?
-            break;
-          default:
-            console.error(`unknown p2p data type: ${data.type}`);
-        }
-      });
-    });
-  }
-
-  peerConnect(peerId: string) {
-    const conn = this.peer.connect(peerId);
-    this.connectionLookup[peerId] = conn;
-    this.connectionsObs.next(this.connectionLookup);
-    conn.on('open', () => {
-      this.peerMessage(peerId, `ola dora from ${this.peer.id}`);
-    });
-  }
-
-  peerDisconnect(peerId: string) {
-    const conn = this.connectionLookup[peerId];
-    conn.close();
-
-    delete this.connectionLookup[peerId];
-    this.connectionsObs.next(this.connectionLookup);
-  }
-
-  peerMessage(peerId: string, message: string) {
-    this.connectionLookup[peerId].send(new Message<string>('peer_message', message));
-  }
-
-  private handlePeerMessage(data: Message<string>) {
-    console.log('got message:', data.data);
   }
 }

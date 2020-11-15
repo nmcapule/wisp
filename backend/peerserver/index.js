@@ -17,6 +17,6 @@ const peerServer = ExpressPeerServer(server, {
 
 app.use('/', peerServer);
 
-server.listen(9000);
+server.listen(3002);
 
 console.log('Listening express peer server');

@@ -1,16 +1,43 @@
 <script lang="ts">
   import L from 'leaflet';
+  import type { WispMessage, WispPositionData } from '../shared/wisp-models';
+  import { messageStore } from './store';
+
+  export let position: WispPositionData;
+  export let markers: WispPositionData[] = [];
 
   let map: L.Map;
-  async function resetMapView(map: L.Map) {
-    const response = await fetch(`http://www.geoplugin.net/json.gp?jsoncallback=?`);
-    const text = await response.text();
-    // Removes stray chars from geoplugin API.
-    const geo = JSON.parse(text.slice(4, text.length - 1));
+  let mapMarkers: L.Marker[] = [];
 
-    const latitude = geo['geoplugin_latitude'];
-    const longitude = geo['geoplugin_longitude'];
+  messageStore.subscribe((message: WispMessage) => {
+    if (!map) {
+      return;
+    }
 
+    const popup = L.popup()
+      .setLatLng([message.sourcePosition.coords.latitude, message.sourcePosition.coords.longitude])
+      .setContent(`<pre>${message.message}</pre>`)
+      .addTo(map);
+
+    setTimeout(() => {
+      popup.removeFrom(map);
+    }, 5000);
+  });
+
+  $: resetMapView(map, position);
+  $: setMarkers(map, markers);
+
+  function setMarkers(map: L.Map, markers: WispPositionData[]) {
+    mapMarkers.forEach((mm) => mm.remove());
+    mapMarkers = markers
+      .filter((m) => !!m)
+      .map((m) => L.marker([m.coords.latitude, m.coords.longitude]));
+    mapMarkers.forEach((mm) => mm.addTo(map));
+  }
+
+  function resetMapView(map: L.Map, position?: WispPositionData) {
+    const latitude = position?.coords?.latitude || 0;
+    const longitude = position?.coords?.longitude || 0;
     map?.setView([latitude, longitude], 10);
   }
 
@@ -19,14 +46,14 @@
       preferCanvas: true,
       maxBounds: new L.LatLngBounds([90, -180], [-90, 180]),
     });
-    resetMapView(created);
+    // resetMapView(created);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       // L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: `
         &copy;<a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>,
           &copy;<a href="https://carto.com/attributions" target="_blank">CARTO</a>`,
       subdomains: 'abcd',
-      maxZoom: 14,
+      maxZoom: 16,
       minZoom: 2,
     }).addTo(created);
     return created;

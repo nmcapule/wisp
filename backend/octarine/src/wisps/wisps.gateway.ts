@@ -46,11 +46,13 @@ export class WispsGateway implements OnGatewayConnection<Socket>, OnGatewayDisco
     const anon = { userId: uuidv4() };
 
     await this.blindIoService.addWisp(client.id, anon);
+    this.handleCountWisps();
   }
 
   /** Override. Fires when an existing client logs out. */
   async handleDisconnect(client: Socket) {
     await this.blindIoService.removeWisp(client.id);
+    this.handleCountWisps();
   }
 
   async handleLogin(client: Socket, message: Message<WispData>) {
@@ -76,13 +78,21 @@ export class WispsGateway implements OnGatewayConnection<Socket>, OnGatewayDisco
 
   async handleScout(client: Socket, message: Message<WispPositionData>) {
     const users = await this.blindIoService.findNearbyWisps(client.id, message.data);
-
-    // Reply list of users.
     client.send(new Message<WispData[]>('scout', users));
   }
 
-  async handleCountWisps(client: Socket) {
+  async handleCountWisps(client?: Socket) {
     const count = await this.blindIoService.countWisps();
-    client.send(new Message<number>('wisps', count));
+    const response = new Message<number>('wisps', count);
+
+    if (client) {
+      client.send(response);
+    } else {
+      this.broadcast(response);
+    }
+  }
+
+  async broadcast<T>(message: Message<T>) {
+    this.server.sockets.send(message);
   }
 }

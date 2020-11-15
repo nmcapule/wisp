@@ -12,14 +12,35 @@ export interface PeerClientOptions {
   pinned?: WispData[];
 }
 
+export const PEER_PING_TIMEOUT_MS = 5000;
+
+export class PeerConnection {
+  lastMessageTimestamp: number;
+  dataConnection: Peer.DataConnection;
+  dataConnectionOpened = false;
+
+  constructor(conn: Peer.DataConnection) {
+    this.lastMessageTimestamp = new Date().getTime();
+    this.dataConnection = conn;
+  }
+
+  send(data: any) {
+    this.dataConnection.send(data);
+  }
+
+  close() {
+    this.dataConnection.close();
+  }
+}
+
 export class PeerClient {
   private peer: Peer;
   private messages = new MessageStore();
   private pinned: { [key: string]: WispData } = {};
 
   /** Connection lookup where key = peer id and value is data connection to the peer. */
-  private connectionLookup: { [key: string]: Peer.DataConnection } = {};
-  connectionsObs = new ReplaySubject<{ [key: string]: Peer.DataConnection }>();
+  private connectionLookup: { [key: string]: PeerConnection } = {};
+  connectionsObs = new ReplaySubject<{ [key: string]: PeerConnection }>();
 
   /** Everytime there's a new message, emit me. */
   messageObs = new ReplaySubject<WispMessage>();
@@ -33,15 +54,21 @@ export class PeerClient {
       port: options.port,
       path: '/peerjs',
       config: {
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          // { urls: 'stun:stun1.l.google.com:19302' },
+          // { urls: 'turn:0.peerjs.com:3478', username: 'peerjs', credential: 'peerjsp' },
+        ],
         sdpSemantics: 'unified-plan',
+        // iceTransportPolicy: 'relay',
       },
     }); // HAYUP
 
     this.peer.on('connection', (conn) => {
-      this.connectionLookup[conn.peer] = conn;
-      this.connectionsObs.next(this.connectionLookup);
       this.setupPeerHandlers(conn.peer, conn);
+
+      this.connectionLookup[conn.peer] = new PeerConnection(conn);
+      this.connectionsObs.next(this.connectionLookup);
     });
 
     this.peer.on('open', () => {
@@ -82,6 +109,8 @@ export class PeerClient {
 
   private setupPeerHandlers(peerId: string, conn: Peer.DataConnection) {
     conn.on('open', () => {
+      this.connectionLookup[peerId].dataConnectionOpened = true;
+
       if (Math.random() > 0.9) {
         console.log('oops... sorry I shouted');
 
@@ -91,6 +120,10 @@ export class PeerClient {
       }
     });
     conn.on('close', () => {
+      console.warn('connection closed from', peerId);
+      this.peerDisconnect(peerId);
+    });
+    conn.on('disconnected', () => {
       console.warn('disconnected from', peerId);
       this.peerDisconnect(peerId);
     });
@@ -98,12 +131,18 @@ export class PeerClient {
       console.warn('p2p connection error from', peerId, ':', e);
     });
     conn.on('data', (data: Message<any>) => {
+      // Refresh last message timestamp whenever getting a new message.
+      this.connectionLookup[peerId].lastMessageTimestamp = new Date().getTime();
+      this.connectionsObs.next(this.connectionLookup);
+
       switch (data.type) {
         case 'peer_message':
-          this.handlePeerMessage(data);
+          this.handlePeerMessage(conn, data);
           break;
-        case 'peer_heartbeat':
-          // Still needed?
+        case 'peer_ping':
+          this.handlePing(conn, data);
+          break;
+        case 'peer_pong':
           break;
         default:
           console.error(`unknown p2p data type: ${data.type}`);
@@ -117,10 +156,10 @@ export class PeerClient {
 
   peerConnect(peerId: string) {
     const conn = this.peer.connect(peerId);
-    this.connectionLookup[peerId] = conn;
-    this.connectionsObs.next(this.connectionLookup);
-
     this.setupPeerHandlers(peerId, conn);
+
+    this.connectionLookup[peerId] = new PeerConnection(conn);
+    this.connectionsObs.next(this.connectionLookup);
   }
 
   peerDisconnect(peerId: string) {
@@ -148,7 +187,9 @@ export class PeerClient {
   peerMessage(peerId: string, message: string, options?: {}) {
     const wispMessage = this.createWispMessage(message, options);
     const conn = this.connectionLookup[peerId];
+
     conn.send(new Message<WispMessage>('peer_message', wispMessage));
+    this.peerPing(peerId);
   }
 
   peerBroadcast(message: string, options?: {}) {
@@ -158,10 +199,40 @@ export class PeerClient {
         return;
       }
       conn.send(new Message<WispMessage>('peer_message', wispMessage));
+      this.peerPing(peerId);
     });
   }
 
-  private handlePeerMessage(data: Message<WispMessage>) {
+  /**
+   * Checks if peer is still alive. If not, then disconnect.
+   * TODO: This doesn't work! Re-check please.
+   */
+  peerPing(peerId: string) {
+    const conn = this.connectionLookup[peerId];
+    if (!conn) {
+      this.peerDisconnect(peerId);
+      return;
+    }
+
+    conn.send(new Message<any>('peer_ping'));
+    setTimeout(() => {
+      const lastMessageTimestamp = this.connectionLookup[peerId]?.lastMessageTimestamp;
+      if (!lastMessageTimestamp) {
+        return;
+      }
+
+      const currentTimestamp = new Date().getTime();
+      const diffMs = currentTimestamp - lastMessageTimestamp;
+      if (diffMs < PEER_PING_TIMEOUT_MS * 2) {
+        console.debug(`${peerId} last seen ${diffMs / 1000} seconds ago`);
+        return;
+      }
+
+      this.peerDisconnect(peerId);
+    }, PEER_PING_TIMEOUT_MS);
+  }
+
+  private handlePeerMessage(conn: Peer.DataConnection, data: Message<WispMessage>) {
     // Ignore if already been seen before.
     if (this.messages.hasOrAdd(data.data)) {
       console.warn('chucked previously seen message:', data.data.signature);
@@ -189,5 +260,9 @@ export class PeerClient {
       console.debug('rebroadcast to', peerId);
       conn.send(new Message<WispMessage>('peer_message', data.data));
     });
+  }
+
+  private handlePing(conn: Peer.DataConnection, data: Message<any>) {
+    conn.send(new Message<WispMessage>('peer_pong'));
   }
 }

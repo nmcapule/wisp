@@ -2,7 +2,7 @@ import io from 'socket.io-client';
 import { SOCKET_IO_BACKEND } from './config';
 import { ReplaySubject } from 'rxjs';
 import { Message, WispData, WispPositionData } from './wisp-models';
-import { PeerClient } from './peer-client';
+import { PeerClient, PEER_PING_TIMEOUT_MS } from './peer-client';
 
 export class WispClient {
   private socket: SocketIOClient.Socket;
@@ -43,6 +43,9 @@ export class WispClient {
   /** Rehosted stuff. */
   get messageObs() {
     return this.peerClient.messageObs;
+  }
+  get connectionsObs() {
+    return this.peerClient.connectionsObs;
   }
 
   broadcastMessage(message: string, options?: {}) {

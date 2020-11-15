@@ -29,7 +29,8 @@ export type MessageType =
   | 'scout'
   | 'wisps'
   | 'peer_message'
-  | 'peer_heartbeat';
+  | 'peer_ping'
+  | 'peer_pong';
 
 export class Message<T> {
   constructor(public type: MessageType, public data?: T) {}

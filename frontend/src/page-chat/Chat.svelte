@@ -1,13 +1,16 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-
-  import Map from './Map.svelte';
-  import { WispClient } from '../shared/wisp-client';
-  import type { WispMessage } from '../shared/wisp-models';
   import { ReplaySubject } from 'rxjs';
   import { takeUntil } from 'rxjs/operators';
 
+  import Map from './Map.svelte';
+  import { WispClient } from '../shared/wisp-client';
+
+  import type { WispMessage } from '../shared/wisp-models';
+  import type { PeerConnection } from '../shared/peer-client';
+
   let countWisps = 0;
+  let connections: { [key: string]: PeerConnection } = {};
   let wispClient: WispClient;
 
   let messages: WispMessage[] = [];
@@ -30,6 +33,10 @@
       console.log('got message:', message);
       messages = [message, ...messages];
     });
+    wispClient.connectionsObs.pipe(takeUntil(destroyedObs)).subscribe((res) => {
+      connections = res;
+      console.debug(connections);
+    });
   });
 
   onDestroy(() => {
@@ -45,6 +52,13 @@
       elemMessageInput.focus();
     }
   })();
+
+  function activateFab() {
+    if (showMessageDialog) {
+      sendMessage(elemMessageInput.value);
+    }
+    showMessageDialog = !showMessageDialog;
+  }
 
   function messageInputKeydown(event) {
     if (event.code === 'Enter' && !event.shiftKey) {
@@ -129,12 +143,34 @@
     max-width: 100%;
     max-height: 100%;
     border: 0;
-    border-radius: 0.75em;
+    border-radius: 0;
     font-size: 1.5em;
   }
 </style>
 
 <div class="wisp-page d-flex align-items-stretch">
+  <div class="wisp-overlay d-flex justify-content-end align-items-start">
+    <div class="online-indicator interactive">{countWisps} wisps online @heywisp.io</div>
+  </div>
+  {#if showMessageDialog}
+    <div
+      class="wisp-overlay wisp-dialog interactive d-flex justify-content-center align-items-center"
+      on:click={() => (showMessageDialog = false)}>
+      <textarea
+        bind:this={elemMessageInput}
+        class="message-input"
+        placeholder="Input text here"
+        on:click={(e) => e.stopPropagation()}
+        on:keydown={messageInputKeydown} />
+    </div>
+  {/if}
+  <div class="wisp-overlay d-flex justify-content-end align-items-end">
+    <div
+      class="fab-button interactive d-flex justify-content-center align-items-center"
+      on:click={activateFab}>
+      {#if showMessageDialog}<span class="icon">Send</span>{:else}<span class="icon">💬</span>{/if}
+    </div>
+  </div>
   <div class="page-card d-flex flex-column">
     <div class="h2 font-weight-normal title">
       Hello
@@ -157,28 +193,6 @@
     </div>
   </div>
   <div class="page-content flex-grow-1 position-relative">
-    <div class="wisp-overlay d-flex justify-content-end align-items-start">
-      <div class="online-indicator interactive">{countWisps} wisps online @heywisp.io</div>
-    </div>
-    <div class="wisp-overlay d-flex justify-content-end align-items-end">
-      <div
-        class="fab-button interactive d-flex justify-content-center align-items-center"
-        on:click={() => (showMessageDialog = true)}>
-        <span class="icon">💬</span>
-      </div>
-    </div>
-    {#if showMessageDialog}
-      <div
-        class="wisp-overlay wisp-dialog interactive d-flex justify-content-center align-items-center"
-        on:click={() => (showMessageDialog = false)}>
-        <textarea
-          bind:this={elemMessageInput}
-          class="message-input"
-          placeholder="Input text here"
-          on:click={(e) => e.stopPropagation()}
-          on:keydown={messageInputKeydown} />
-      </div>
-    {/if}
     <Map />
   </div>
 </div>

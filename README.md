@@ -26,6 +26,8 @@ now and it only budged a little on the sliding scale of accessibility vs gate-ke
 
 > **Status**: Fail. I'm going back to the traditional server-client architecture ☀
 
+> **Status (the next morning)**: OK. I'm jumping in the TURN train. Xirsys has a free tier. Choo choo!
+
 ## Development
 
 You need to `docker-compose`.

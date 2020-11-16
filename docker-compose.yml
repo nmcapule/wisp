@@ -78,9 +78,19 @@ services:
     networks:
       - network-wisp
 
+  # -- disabled until we can make this work.
+  backend-coturn:
+    image: instrumentisto/coturn:4.5.1.3
+    restart: always
+    network_mode: "host"
+    volumes:
+      - "$PWD/storage/coturn/turnserver.conf:/etc/coturn/turnserver.conf"
+
   frontend:
     privileged: true
     container_name: wisp-frontend
+    depends_on:
+      - backend-octarine
     build:
       context: ./frontend
       dockerfile: ./Dockerfile.dev

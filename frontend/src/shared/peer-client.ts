@@ -64,10 +64,15 @@ export class PeerClient {
       config: {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
-          // { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          {
+            urls: 'turn:139.162.xx.xx:3478',
+            credential: 'xxxxxxxx',
+            username: 'xxxxxxxx',
+          },
           // { urls: 'turn:0.peerjs.com:3478', username: 'peerjs', credential: 'peerjsp' },
         ],
-        sdpSemantics: 'unified-plan',
+        // sdpSemantics: 'unified-plan',
         // iceTransportPolicy: 'relay',
       },
     }); // HAYUP
